@@ -5,6 +5,7 @@
 
 本項目由Javascript驅動，環境為
 > Node js v21.7.1
+> 
 > Discord.js v14
 
 原本在玩世界計畫，想說搞個車隊
