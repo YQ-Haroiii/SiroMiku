@@ -27,6 +27,15 @@ const client = new Client({
 //設定訊息移除時間
 const earse_message_time = 5000;
 
+//設定管理員可以使用的指令
+let Admin_Command = [
+    "setrole",
+    "removerole",
+    "deleterole",
+    "getrole",
+    "reloadrole"
+]
+
 //設定訊息反應資料庫
 let Reaction_Database = {};
 
@@ -51,7 +60,7 @@ client.on('interactionCreate', async interaction => {
     if(!interaction.isCommand() || interaction.user.bot) return;
     
     //設定表符身分組於訊息
-    if (interaction.commandName === 'setrole'){
+    if (interaction.commandName === 'setrole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -162,7 +171,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //移除單個反應
-    if(interaction.commandName === 'removerole'){
+    if(interaction.commandName === 'removerole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -262,7 +271,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //移除所有訊息反應
-    if(interaction.commandName === 'deleterole'){
+    if(interaction.commandName === 'deleterole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -340,7 +349,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //查看訊息反應
-    if(interaction.commandName === 'getrole'){
+    if(interaction.commandName === 'getrole' && Check_Admin(interaction)){
         //常駐回應，不刪除
 
         //伺服器參數
@@ -357,19 +366,28 @@ client.on('interactionCreate', async interaction => {
             Command_Message = await Command_Channel.messages.fetch(message_id);
         }
         catch (error){ //判斷頻道不存在，例如要設定的訊息不再該頻道，通常會出錯
-            interaction.reply('你是不是走錯地方了，我在這裡看不到那個訊息...');
+            interaction.reply({
+                content: '你是不是走錯地方了，我在這裡看不到那個訊息...',
+                ephemeral: true
+            });
             return;
         }
 
         //如果沒有伺服器資訊
         if(Reaction_Database[guild_id] == undefined){
-            interaction.reply('這個訊息沒有設定過反應...');
+            interaction.reply({
+                content: '這個訊息沒有設定過反應...',
+                ephemeral: true   
+            });
             return;
         }
 
         //如果沒有頻道資訊
         if(Reaction_Database[guild_id][message_id] == undefined){
-            interaction.reply('這個訊息沒有設定過反應...');
+            interaction.reply({
+                content: '這個訊息沒有設定過反應...',
+                ephemeral: true   
+            });
             return;
         }
 
@@ -400,7 +418,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //重新加載反應
-    if(interaction.commandName === 'reloadrole'){
+    if(interaction.commandName === 'reloadrole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -446,6 +464,17 @@ client.on('interactionCreate', async interaction => {
 
         //回覆訊息
         interaction.reply('我已經將訊息反應更新了...');
+    }
+
+    //如果非管理員使用管理員指令
+    for(i = 0;i < Admin_Command_List.length;i++){
+        if(interaction.commandName == Admin_Command_List[i] && !Check_Admin(interaction)){
+            interaction.reply({
+                content: '你沒有權限使用此指令...',
+                ephemeral: true
+            });
+            return;
+        }
     }
 })
 
@@ -528,6 +557,20 @@ client.on('messageReactionRemove', async (interaction, user) => {
         //client.channels.get(channel_id).send('<@' + user_id + '> 我已經幫你移除身分組了...');
     }
 })
+
+//管理員權限偵測
+function Check_Admin(interaction){
+    //取得管理員權限
+    const admin = interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+    //如果沒有管理員權限
+    if(admin == false){
+        return false;
+    }
+
+    //如果有管理員權限
+    return true;
+}
 
 
 
