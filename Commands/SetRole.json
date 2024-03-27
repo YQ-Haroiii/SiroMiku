@@ -1,0 +1,24 @@
+{
+    "name": "setrole",
+    "description": "設定表符身分組",
+    "options": [
+        {
+            "name": "message_id",
+            "description": "請輸入訊息 ID",
+            "type": 3,
+            "required": true
+        },
+        {
+            "name": "emoji",
+            "description": "請放入表符",
+            "type": 3,
+            "required": true
+        },
+        {
+            "name": "role",
+            "description": "請給予身分組",
+            "type": 8,
+            "required": true
+        }
+    ]
+}

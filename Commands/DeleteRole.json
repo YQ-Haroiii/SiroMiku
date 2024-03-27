@@ -1,0 +1,12 @@
+{
+    "name": "deleterole",
+    "description": "移除整個訊息內表符身分組",
+    "options": [
+        {
+            "name": "message_id",
+            "description": "請輸入訊息 ID",
+            "type": 3,
+            "required": true
+        }
+    ]
+}

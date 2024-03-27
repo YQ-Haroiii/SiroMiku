@@ -1,0 +1,12 @@
+{
+    "name": "reloadrole",
+    "description": "重新載入頻道內身分組",
+    "options": [
+        {
+            "name": "message_id",
+            "description": "請輸入訊息 ID",
+            "type": 3,
+            "required": true
+        }
+    ]
+}
