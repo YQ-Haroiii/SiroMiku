@@ -1,0 +1,18 @@
+{
+    "name": "setauth",
+    "description": "設定認證身分組",
+    "options": [
+        {
+            "name": "message",
+            "description": "請輸入認證訊息",
+            "type": 3,
+            "required": true
+        },
+        {
+            "name": "role",
+            "description": "賦予身分組",
+            "type": 8,
+            "required": true
+        }
+    ]
+}

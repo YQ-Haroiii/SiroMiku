@@ -1,0 +1,12 @@
+{
+    "name": "removeauth",
+    "description": "移除認證身分組",
+    "options": [
+        {
+            "name": "message",
+            "description": "移除認證訊息",
+            "type": 3,
+            "required": true
+        }
+    ]
+}

@@ -35,7 +35,9 @@ let Admin_Command = [
     "getrole",
     "reloadrole",
     "newjoin",
-    "removejoin"
+    "removejoin",
+    "setauth",
+    "removeauth"
 ]
 
 //設定訊息反應資料庫
@@ -44,14 +46,18 @@ let Reaction_Database = {};
 //設定加入身分組
 let New_Join_Database = {};
 
+//設定訊息身分組資料庫
+let Message_Auth_Database = {};
+
 //監聽事件
 client.on('ready', () => {
     //清空控制台
     console.clear();
 
     //初始化資料庫資訊
-    Reaction_Database_System.Load(); //讀取反應資料庫
-    New_Join_System.Load(); //讀取加入身分組
+    Reaction_Database = Reaction_Database_System.Load(); //讀取反應資料庫
+    New_Join_Database = New_Join_System.Load(); //讀取加入身分組
+    Message_Auth_Database = Message_Auth_System.Load(); //讀取訊息驗證身分組
 
     //顯示訊息
     console.log('Haroiii Bot Ready!');
@@ -66,7 +72,7 @@ client.on('interactionCreate', async interaction => {
     if(!interaction.isCommand() || interaction.user.bot) return;
     
     //設定表符身分組於訊息
-    if (interaction.commandName === 'setrole' && Check_Admin(interaction)){
+    if(interaction.commandName === 'setrole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -167,7 +173,7 @@ client.on('interactionCreate', async interaction => {
         });
 
         //寫入檔案
-        FileSystem.writeFileSync('./Data/message_role.json', JSON.stringify(Reaction_Database));
+        Reaction_Database_System.Save();
 
         //新增反應，並回覆
         Command_Message.react(emoji);
@@ -509,7 +515,7 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    //設定新加入成員身分組
+    //移除新加入成員身分組
     if(interaction.commandName === 'removejoin' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
@@ -529,8 +535,8 @@ client.on('interactionCreate', async interaction => {
         }
 
         //檢查該身分組是否已經設定過
-        if(New_Join_Database[guild_id].includes(role_id)){
-            interaction.reply('這個身分組已經設定過了...');
+        if(!New_Join_Database[guild_id].includes(role_id)){
+            interaction.reply('這個身分組沒有設定過...');
             return;
         }
 
@@ -559,9 +565,270 @@ client.on('interactionCreate', async interaction => {
         New_Join_System.Save();
 
         //回覆訊息
-        interaction.reply('我已經將身分組設定完成了...');
+        interaction.reply('我已經將身分組移除完成了...');
 
         return;
+    }
+
+    //設定認證訊息
+    if(interaction.commandName === 'setauth' && Check_Admin(interaction)){
+        //提前指定移除指令訊息，讓此通知設為提醒功能
+        setTimeout(()=>{
+            interaction.deleteReply();
+        },earse_message_time);
+
+        //基礎資料
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+        const channel_id = interaction.channelId;
+
+        //拆解指令參數
+        const message = interaction.options.get('message').value;
+        const role = interaction.options.get('role').value;
+
+        //設定旗標，判斷是否有相同的認證訊息
+        let detect_Reaction = false;
+
+        //檢查伺服器是否有資料
+        if(Message_Auth_Database[guild_id] != undefined){
+            //檢查頻道是否有資料
+            if(Message_Auth_Database[guild_id][channel_id] != undefined){
+                //判斷有沒有訊息
+                if(Message_Auth_Database[guild_id][channel_id].length != 0){
+                    //掃描訊息
+                    for(i = 0;i < Message_Auth_Database[guild_id][channel_id].length;i++){
+                        //檢查資料庫是否有相同的訊息
+                        if(Message_Auth_Database[guild_id][channel_id][i].message === message){
+                            detect_Reaction = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        //如果有相同的訊息
+        if(detect_Reaction){
+            interaction.reply('這個訊息已經設定過了...');
+            return;
+        }
+
+        //如果伺服器沒有資料
+        if(Message_Auth_Database[guild_id] == undefined){
+            Message_Auth_Database[guild_id] = {};
+        }
+
+        //如果頻道沒有資料
+        if(Message_Auth_Database[guild_id][channel_id] == undefined){
+            Message_Auth_Database[guild_id][channel_id] = [];
+        }
+
+        //新增資料
+        Message_Auth_Database[guild_id][channel_id].push({
+            message: message,
+            role: role
+        })
+
+        //寫入檔案
+        Message_Auth_System.Save();
+
+        //回覆
+        interaction.reply("我已經將認證訊息設定好了...");
+
+        return;
+    }
+
+    //移除認證訊息
+    if(interaction.commandName === 'removeauth' && Check_Admin(interaction)){
+        //提前指定移除指令訊息，讓此通知設為提醒功能
+        setTimeout(()=>{
+            interaction.deleteReply();
+        },earse_message_time);
+
+        //基礎資料
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+        const channel_id = interaction.channelId;
+
+        //拆解指令參數
+        const message = interaction.options.get('message').value;
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id] == undefined){
+            interaction.reply('我沒有這個認證的訊息...');
+            return;
+        }
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id][channel_id] == undefined){
+            interaction.reply('我沒有這個認證的訊息...');
+            return;
+        }
+
+        //檢查伺服器是否有資料
+        if(Message_Auth_Database[guild_id] != undefined){
+            //檢查頻道是否有資料
+            if(Message_Auth_Database[guild_id][channel_id] != undefined){
+                //判斷有沒有訊息
+                if(Message_Auth_Database[guild_id][channel_id].length > 0){
+                    //掃描訊息
+                    for(i = 0;i < Message_Auth_Database[guild_id][channel_id].length;i++){
+                        //檢查資料庫是否有相同的訊息，有的話則移除
+                        if(Message_Auth_Database[guild_id][channel_id][i].message == message){
+                            Message_Auth_Database[guild_id][channel_id][i] = undefined;
+                        }
+                    }
+                }
+            }
+        }
+
+        //建立認證訊息暫存
+        let Message_Auth_Database_Cache = [];
+
+        //將非defined資料存入
+        for(i = 0;i < Message_Auth_Database[guild_id][channel_id].length;i++){
+            if(Message_Auth_Database[guild_id][channel_id][i] != undefined){
+                Message_Auth_Database_Cache.push(Message_Auth_Database[guild_id][channel_id][i]);
+            }
+        }
+
+        //更新資料
+        Message_Auth_Database[guild_id][channel_id] = Message_Auth_Database_Cache;
+
+        //寫入檔案
+        Message_Auth_System.Save();
+
+        //回覆
+        interaction.reply("我已經將認證訊息移除了...");
+
+        return;
+    }
+
+    //移除全部認證訊息
+    if(interaction.commandName === 'deleteauth' && Check_Admin(interaction)){
+        //提前指定移除指令訊息，讓此通知設為提醒功能
+        setTimeout(()=>{
+            interaction.deleteReply();
+        },earse_message_time);
+
+        //基礎資料
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+        const channel_id = interaction.channelId;
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id] == undefined){
+            console.log("thisA");
+            interaction.reply('這個頻道沒有任何認證訊息...');
+            return;
+        }
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id][channel_id] == undefined){
+            interaction.reply('這個頻道沒有任何認證訊息...');
+            return;
+        }
+
+        //檢查伺服器是否有資料
+        if(Message_Auth_Database[guild_id] != undefined){
+            //檢查頻道是否有資料
+            if(Message_Auth_Database[guild_id][channel_id] != undefined){
+                //判斷有沒有訊息
+                if(Message_Auth_Database[guild_id][channel_id].length > 0){
+                    //移除全部訊息
+                    Message_Auth_Database[guild_id][channel_id] = undefined;
+                }
+            }
+        }
+
+        //建立認證頻道暫存
+        let Message_Auth_Database_Cache = {};
+
+        //取得所有頻道名稱
+        const Message_Auth_Database_Channels = Object.keys(Message_Auth_Database[guild_id]);
+
+        //將非defined資料存入
+        for(i = 0;i < Message_Auth_Database_Channels.length;i++){
+            //如果有資料
+            if(Message_Auth_Database[guild_id][Message_Auth_Database_Channels[i]] != undefined){
+                //放入認證訊息暫存
+                Message_Auth_Database_Cache[Message_Auth_Database_Channels[i]] = Message_Auth_Database[guild_id][Message_Auth_Database_Channels[i]];
+            }
+        }
+
+        //更新資料
+        Message_Auth_Database[guild_id] = Message_Auth_Database_Cache;
+
+        //寫入檔案
+        Message_Auth_System.Save();
+
+        //回覆
+        interaction.reply("我已經將認證訊息全部刪除了...");
+
+        return;
+    }
+
+    //查看認證訊息
+    if(interaction.commandName === 'getauth' && Check_Admin(interaction)){
+        //常駐回應，不刪除
+
+        //伺服器參數
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+        const channel_id = interaction.channelId;
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id] == undefined){
+            interaction.reply({
+                content: '這個頻道沒有任何認證訊息...',
+                ephemeral: true
+            });
+            return;
+        }
+
+        //沒有認證訊息
+        if(Message_Auth_Database[guild_id][channel_id] == undefined){
+            interaction.reply({
+                content: '這個頻道沒有任何認證訊息...',
+                ephemeral: true
+            });
+            return;
+        }
+
+        //取得伺服器全部頻道
+        const guildinfo = Message_Auth_Database[guild_id];
+        
+        //取得當前的頻道資訊
+        const guildchannel = guildinfo[channel_id];
+
+        //如果長度為0，表示沒有資料
+        if(guildchannel.length == 0){
+            interaction.reply({
+                content: '這個頻道沒有任何認證訊息...',
+                ephemeral: true
+            });
+            return;
+        }
+
+        //建立回應表
+        let Reply = "";
+
+        //開頭
+        Reply += "你要的反應資訊在這裡...\n";
+
+        //訊息資訊
+        Reply += "頻道 ID：" + channel_id + "\n\n";
+
+        //列出全部資訊
+        for(i = 0;i < guildchannel.length;i++){
+             Reply += "> 認證訊息 : " + guildchannel[i].message + "\n";
+             Reply += "> 認證身分組 : " + guildchannel[i].role + "\n\n";
+        }
+
+        //回覆訊息，只有使用者可以看到
+        interaction.reply({
+            content: Reply,
+            ephemeral: true
+        });
     }
 
     //如果非管理員使用管理員指令
@@ -670,6 +937,30 @@ client.on('guildMemberAdd', async (member) => {
     }
 })
 
+//成員訊息
+client.on('messageCreate', async message => {
+    //取得基礎資料
+    const guild_id = message.guildId;
+
+    //檢查該伺服器是否有資料
+    if(Message_Auth_Database[guild_id] != undefined){
+        //檢查該頻道是否有資料
+        if(Message_Auth_Database[guild_id][message.channelId] != undefined){
+            //掃描訊息資料庫
+            for(i = 0 ; i < Message_Auth_Database[guild_id][message.channelId].length ; i++){
+                //如果訊息有匹配
+                if(message.content === Message_Auth_Database[guild_id][message.channelId][i].message){
+                    //將使用者加入身分組
+                    message.member.roles.add(Message_Auth_Database[guild_id][message.channelId][i].role);
+
+                    //移除使用者的訊息
+                    message.delete();
+                }
+            }
+        }
+    }
+})
+
 //管理員權限偵測
 function Check_Admin(interaction){
     //取得管理員權限
@@ -684,71 +975,102 @@ function Check_Admin(interaction){
     return true;
 }
 
-
 //反應資料
-let Reaction_Database_System = {
-    //反應資料檔案位置
-    File_name: './Data/message_role.json',
+const Reaction_Database_System = {
+    //檔案位置
+    File_name: './Data/reaction_role.json',
 
-    //讀取反應資料
+    //讀取資料
     Load: function(){
         //判斷檔案是否存在
         if(FileSystem.existsSync(this.File_name) == false){
             //創建檔案
             FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
         }
-
+    
         //讀取JSON檔案
-        const Cache_Reaction_Database = FileSystem.readFileSync(this.File_name, 'utf8');
-
+        const Cache_File = FileSystem.readFileSync(this.File_name, 'utf8');
+    
         //如果是空字串
-        if(Cache_Reaction_Database == ''){
+        if(Cache_File == ''){
             //建立字串
             FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
         }
-
+    
         //將JSON寫入變數
-        Reaction_Database = JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
+        return JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
     },
 
-    //儲存反應資料
+    //儲存資料
     Save: function(){
-        //將反應資料寫入檔案
+        //將加入身分組資料寫入檔案
         FileSystem.writeFileSync(this.File_name, JSON.stringify(Reaction_Database));
     }
 }
 
-
 //加入身分組資料
-let New_Join_System = {
-    //加入身分組檔案位置
+const New_Join_System = {
+    //檔案位置
     File_name: './Data/join_role.json',
 
-    //讀取加入身分組資料
+    //讀取資料
     Load: function(){
         //判斷檔案是否存在
         if(FileSystem.existsSync(this.File_name) == false){
             //創建檔案
             FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
         }
-
+    
         //讀取JSON檔案
-        const Cache_Join_Role = FileSystem.readFileSync(this.File_name, 'utf8');
-
+        const Cache_File = FileSystem.readFileSync(this.File_name, 'utf8');
+    
         //如果是空字串
-        if(Cache_Join_Role == ''){
+        if(Cache_File == ''){
             //建立字串
             FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
         }
-
+    
         //將JSON寫入變數
-        Join_Role = JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
+        return JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
     },
 
-    //儲存加入身分組資料
+    //儲存資料
     Save: function(){
         //將加入身分組資料寫入檔案
         FileSystem.writeFileSync(this.File_name, JSON.stringify(New_Join_Database));
+    }
+}
+
+//訊息驗證身分組資料
+const Message_Auth_System = {
+    //檔案位置
+    File_name: './Data/message_auth_role.json',
+
+    //讀取資料
+    Load: function(){
+        //判斷檔案是否存在
+        if(FileSystem.existsSync(this.File_name) == false){
+            //創建檔案
+            FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
+        }
+    
+        //讀取JSON檔案
+        const Cache_File = FileSystem.readFileSync(this.File_name, 'utf8');
+    
+        //如果是空字串
+        if(Cache_File == ''){
+            //建立字串
+            FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
+        }
+    
+        //將JSON寫入變數
+        return JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
+    },
+
+    //儲存資料
+    Save: function(){
+        //將加入身分組資料寫入檔案
+        FileSystem.writeFileSync(this.File_name, JSON.stringify(Message_Auth_Database));
     }
 }
 
