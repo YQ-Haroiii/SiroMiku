@@ -1,5 +1,5 @@
 # SiroMiku
-目前版本 : 白蔥 Version 1.0
+目前版本 : 白蔥 Version 1.1
 
 專為身分組Discord分類機器人撰寫
 
