@@ -1,0 +1,12 @@
+{
+    "name": "newjoin",
+    "description": "設定新加入人員的身分組",
+    "options": [
+        {
+            "name": "role",
+            "description": "輸入身分組",
+            "type": 8,
+            "required": true
+        }
+    ]
+}

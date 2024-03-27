@@ -27,8 +27,22 @@ const client = new Client({
 //設定訊息移除時間
 const earse_message_time = 5000;
 
+//設定管理員可以使用的指令
+let Admin_Command = [
+    "setrole",
+    "removerole",
+    "deleterole",
+    "getrole",
+    "reloadrole",
+    "newjoin",
+    "removejoin"
+]
+
 //設定訊息反應資料庫
 let Reaction_Database = {};
+
+//設定加入身分組
+let New_Join_Database = {};
 
 //監聽事件
 client.on('ready', () => {
@@ -37,6 +51,7 @@ client.on('ready', () => {
 
     //初始化資料庫資訊
     Reaction_Database_System.Load(); //讀取反應資料庫
+    New_Join_System.Load(); //讀取加入身分組
 
     //顯示訊息
     console.log('Haroiii Bot Ready!');
@@ -51,7 +66,7 @@ client.on('interactionCreate', async interaction => {
     if(!interaction.isCommand() || interaction.user.bot) return;
     
     //設定表符身分組於訊息
-    if (interaction.commandName === 'setrole'){
+    if (interaction.commandName === 'setrole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -162,7 +177,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //移除單個反應
-    if(interaction.commandName === 'removerole'){
+    if(interaction.commandName === 'removerole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -262,7 +277,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //移除所有訊息反應
-    if(interaction.commandName === 'deleterole'){
+    if(interaction.commandName === 'deleterole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -340,7 +355,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //查看訊息反應
-    if(interaction.commandName === 'getrole'){
+    if(interaction.commandName === 'getrole' && Check_Admin(interaction)){
         //常駐回應，不刪除
 
         //伺服器參數
@@ -357,19 +372,28 @@ client.on('interactionCreate', async interaction => {
             Command_Message = await Command_Channel.messages.fetch(message_id);
         }
         catch (error){ //判斷頻道不存在，例如要設定的訊息不再該頻道，通常會出錯
-            interaction.reply('你是不是走錯地方了，我在這裡看不到那個訊息...');
+            interaction.reply({
+                content: '你是不是走錯地方了，我在這裡看不到那個訊息...',
+                ephemeral: true
+            });
             return;
         }
 
         //如果沒有伺服器資訊
         if(Reaction_Database[guild_id] == undefined){
-            interaction.reply('這個訊息沒有設定過反應...');
+            interaction.reply({
+                content: '這個訊息沒有設定過反應...',
+                ephemeral: true   
+            });
             return;
         }
 
         //如果沒有頻道資訊
         if(Reaction_Database[guild_id][message_id] == undefined){
-            interaction.reply('這個訊息沒有設定過反應...');
+            interaction.reply({
+                content: '這個訊息沒有設定過反應...',
+                ephemeral: true   
+            });
             return;
         }
 
@@ -400,7 +424,7 @@ client.on('interactionCreate', async interaction => {
     }
 
     //重新加載反應
-    if(interaction.commandName === 'reloadrole'){
+    if(interaction.commandName === 'reloadrole' && Check_Admin(interaction)){
         //提前指定移除指令訊息，讓此通知設為提醒功能
         setTimeout(()=>{
             interaction.deleteReply();
@@ -446,6 +470,109 @@ client.on('interactionCreate', async interaction => {
 
         //回覆訊息
         interaction.reply('我已經將訊息反應更新了...');
+    }
+
+    //設定新加入成員身分組
+    if(interaction.commandName === 'newjoin' && Check_Admin(interaction)){
+        //提前指定移除指令訊息，讓此通知設為提醒功能
+        setTimeout(()=>{
+            interaction.deleteReply();
+        },earse_message_time);
+
+        //伺服器參數
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+
+        //拆解指令參數
+        const role_id = interaction.options.get('role').value;
+
+        //檢查該群組是否存在
+        if(New_Join_Database[guild_id] == undefined){
+            New_Join_Database[guild_id] = [];
+        }
+
+        //檢查該身分組是否已經設定過
+        if(New_Join_Database[guild_id].includes(role_id)){
+            interaction.reply('這個身分組已經設定過了...');
+            return;
+        }
+
+        //新增身分組
+        New_Join_Database[guild_id].push(role_id);
+
+        //儲存資料
+        New_Join_System.Save();
+
+        //回覆訊息
+        interaction.reply('我已經將身分組設定完成了...');
+
+        return;
+    }
+
+    //設定新加入成員身分組
+    if(interaction.commandName === 'removejoin' && Check_Admin(interaction)){
+        //提前指定移除指令訊息，讓此通知設為提醒功能
+        setTimeout(()=>{
+            interaction.deleteReply();
+        },earse_message_time);
+
+        //伺服器參數
+        const guild_id = interaction.guildId;
+        const user_id = interaction.user.id;
+
+        //拆解指令參數
+        const role_id = interaction.options.get('role').value;
+
+        //檢查該群組是否存在
+        if(New_Join_Database[guild_id] == undefined){
+            New_Join_Database[guild_id] = [];
+        }
+
+        //檢查該身分組是否已經設定過
+        if(New_Join_Database[guild_id].includes(role_id)){
+            interaction.reply('這個身分組已經設定過了...');
+            return;
+        }
+
+        //移除身分組
+        for(i = 0;i < New_Join_Database[guild_id].length;i++){
+            if(New_Join_Database[guild_id][i] == role_id){
+                New_Join_Database[guild_id][i] = undefined;
+                break;
+            }
+        }
+
+        //建立身分組暫存
+        const New_Join_Database_Cache = [];
+
+        //移除空白值
+        for(i = 0;i < New_Join_Database[guild_id].length;i++){
+            if(New_Join_Database[guild_id][i] != undefined){
+                New_Join_Database_Cache.push(New_Join_Database[guild_id][i]);
+            }
+        }
+
+        //替換原本資料
+        New_Join_Database[guild_id] = New_Join_Database_Cache;
+
+        //儲存資料
+        New_Join_System.Save();
+
+        //回覆訊息
+        interaction.reply('我已經將身分組設定完成了...');
+
+        return;
+    }
+
+    //如果非管理員使用管理員指令
+    for(i = 0;i < Admin_Command.length;i++){
+        if(interaction.commandName == Admin_Command[i] && !Check_Admin(interaction)){
+            interaction.reply({
+                content: '你沒有權限使用此指令...',
+                ephemeral: true
+            });
+            return;
+        }
     }
 })
 
@@ -529,8 +656,36 @@ client.on('messageReactionRemove', async (interaction, user) => {
     }
 })
 
+//成員加入
+client.on('guildMemberAdd', async (member) => {
+    //取得基礎資料
+    const guild_id = member.guild.id;
+
+    //檢查是否有加入預設身分組
+    if(New_Join_Database[guild_id] != undefined){
+        //將使用者加入身分組
+        for(i = 0 ; i < New_Join_Database[guild_id].length ; i++){
+            member.roles.add(New_Join_Database[guild_id][i]);
+        }
+    }
+})
+
+//管理員權限偵測
+function Check_Admin(interaction){
+    //取得管理員權限
+    const admin = interaction.member.permissions.has(PermissionsBitField.Flags.Administrator);
+
+    //如果沒有管理員權限
+    if(admin == false){
+        return false;
+    }
+
+    //如果有管理員權限
+    return true;
+}
 
 
+//反應資料
 let Reaction_Database_System = {
     //反應資料檔案位置
     File_name: './Data/message_role.json',
@@ -560,6 +715,40 @@ let Reaction_Database_System = {
     Save: function(){
         //將反應資料寫入檔案
         FileSystem.writeFileSync(this.File_name, JSON.stringify(Reaction_Database));
+    }
+}
+
+
+//加入身分組資料
+let New_Join_System = {
+    //加入身分組檔案位置
+    File_name: './Data/join_role.json',
+
+    //讀取加入身分組資料
+    Load: function(){
+        //判斷檔案是否存在
+        if(FileSystem.existsSync(this.File_name) == false){
+            //創建檔案
+            FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
+        }
+
+        //讀取JSON檔案
+        const Cache_Join_Role = FileSystem.readFileSync(this.File_name, 'utf8');
+
+        //如果是空字串
+        if(Cache_Join_Role == ''){
+            //建立字串
+            FileSystem.writeFileSync(this.File_name, JSON.stringify({}));
+        }
+
+        //將JSON寫入變數
+        Join_Role = JSON.parse(FileSystem.readFileSync(this.File_name, 'utf8'));
+    },
+
+    //儲存加入身分組資料
+    Save: function(){
+        //將加入身分組資料寫入檔案
+        FileSystem.writeFileSync(this.File_name, JSON.stringify(New_Join_Database));
     }
 }
 
